@@ -122,9 +122,10 @@ function App() {
       {error && <p className="error" role="alert">{error}</p>}
       {queue.length > 0 && <div className="queued-tickets"><span>NEXT UP</span>{queue.map((ticket) => <div key={ticket.id}><b>#{ticket.id}</b> {ticket.text}<button type="button" aria-label={`Remove ticket ${ticket.id}`} onClick={() => setQueue((line) => line.filter((item) => item.id !== ticket.id))}>×</button></div>)}</div>}
       {tickets.some(Boolean) && <div className="active-tickets">{tickets.map((ticket, slot) => ticket ? <div key={slot} className="ticket"><span className="ticket-label">ORDER {String(ticket.id).padStart(2, '0')}</span><strong>{MENU[ticket.order.recipe].name}</strong><span className="ticket-stage">{stage(kitchen.slots[slot])}</span><span className="ticket-request">{ticket.text}</span></div> : <div key={slot} className="ticket vacant">EMPTY SPOT {slot + 1}</div>)}</div>}
-      <div className="move-bubble" role="status"><div className="move-icon">✳</div><div><small>JEV · {paused ? 'PAUSED' : busy ? 'DECIDING' : 'LAST MOVE'}</small><strong>{caption}</strong></div></div>
+      <div className="move-bubble" role="status"><div className="move-icon">✳</div><div><small>JEV · {paused ? 'PAUSED' : busy ? 'DECIDING' : active ? 'LAST MOVE' : 'READY'}</small><strong>{caption}</strong></div></div>
       <div className="scene" data-active={active} aria-label="Burger grill game">
         <GrillScene kitchen={kitchen} motion={motion} ids={tickets.map((ticket) => ticket?.id ?? null)}/>
+        <span className="prep-tag" aria-hidden="true">02 / PLATING</span>
       </div>
       <div className="mobile-plating" aria-label="Burger assembly plates"><GrillScene kitchen={kitchen} motion={null} ids={tickets.map((ticket) => ticket?.id ?? null)}/></div>
       <div className="toolbar"><span>{tickets.filter(Boolean).length} on the line{queue.length ? ` · ${queue.length} waiting` : ''}</span><div><button onClick={() => { sequence.current++; setPaused((value) => !value); setError(''); }} disabled={!active}>{paused ? 'Resume Jev ▶' : 'Pause Jev Ⅱ'}</button>{tickets.map((ticket, slot) => ticket && <button key={slot} onClick={() => start(slot as Slot, ticket)}>Retry #{ticket.id} ↗</button>)}</div></div>
