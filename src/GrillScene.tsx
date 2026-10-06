@@ -1,10 +1,10 @@
-import { doneness } from './engine/burger';
+import type { Patty } from './engine/burger';
 import type { KitchenState, KitchenAction } from './engine/kitchen';
 
-const bars = Array.from({ length: 17 }, (_, i) => 119 + i * 26);
+const bars = Array.from({ length: 14 }, (_, i) => 119 + i * 31);
 const grillPositions = [[-165, -90], [165, -90], [-165, 115], [165, 115]];
 const platePositions = [[940, 200], [1110, 200], [940, 435], [1110, 435]];
-const sesame = [[-50,-35],[-21,-48],[16,-39],[42,-22],[-34,-16],[4,-19],[55,-40],[-2,-55]];
+const sesame = [[-50,-29],[-19,-54],[23,-43],[53,-23],[-39,12],[6,4],[42,22],[-4,42]];
 
 function StackedBurger({ stack, x, y }: { stack: string[]; x: number; y: number }) {
   return <g transform={`translate(${x} ${y}) scale(.46)`} filter="url(#foodShadow)">
@@ -21,12 +21,35 @@ function StackedBurger({ stack, x, y }: { stack: string[]; x: number; y: number 
       {layer === 'jalapeno' && <g>{[[-44,-37],[36,-30],[-23,36],[46,36]].map(([x,y],i)=><g key={i}><ellipse cx={x} cy={y} rx="24" ry="16" fill="#5f943d" stroke="#315b30" strokeWidth="4"/><ellipse cx={x} cy={y} rx="11" ry="7" fill="#c3d087"/></g>)}</g>}
       {layer === 'avocado' && <g>{[-50,-18,15,46].map((x,i)=><path key={i} d={`M${x-25} -49 Q${x+11} -73 ${x+25} -40 Q${x+34} 6 ${x+18} 54 Q${x} 75 ${x-17} 55 Q${x-30} 9 ${x-25} -49Z`} fill="#a8c95e" stroke="#5b8739" strokeWidth="4"/>)}</g>}
       {['ketchup','mustard','mayo'].includes(layer) && <path d="M-62 -44 Q-12 -82 51 -45 Q86 -4 52 43 Q4 76 -54 47 Q-82 5 -62 -44Z" fill="none" stroke={layer === 'ketchup' ? '#be392d' : layer === 'mustard' ? '#d4a12c' : '#eee2bb'} strokeWidth="13" strokeDasharray="36 12" strokeLinecap="round"/>}
-      {layer === 'top bun' && <g><circle r="105" fill="url(#bunTop)" stroke="#9e582a" strokeWidth="6"/><path d="M-75 -34 Q-45 -78 10 -84" fill="none" stroke="#ffe0a4" strokeWidth="9" opacity=".6" strokeLinecap="round"/>{sesame.map(([x,y],i)=><ellipse key={i} cx={x*1.5} cy={y*1.3+35} rx="8" ry="3.3" transform={`rotate(-28 ${x*1.5} ${y*1.3+35})`} fill="#fff0c1"/>)}</g>}
+      {layer === 'top bun' && <g><circle r="88" fill="url(#bunTop)" stroke="#9e582a" strokeWidth="6"/><path d="M-65 -30 Q-40 -68 8 -70" fill="none" stroke="#ffe0a4" strokeWidth="8" opacity=".6" strokeLinecap="round"/>{sesame.map(([x,y],i)=><ellipse key={i} cx={x} cy={y} rx="7" ry="3" transform={`rotate(-28 ${x} ${y})`} fill="#fff0c1"/>)}</g>}
     </g>)}
   </g>;
 }
 
-export function GrillScene({ kitchen, motion, ids }: { kitchen: KitchenState; motion: { action: KitchenAction; id: number } | null; ids: (number | null)[] }) {
+function pattyColors(patty: Patty): [string, string, string] {
+  const heat = patty.ticks[patty.side];
+  if (heat > 3) return ['#594039', '#382821', '#261d1a'];
+  if (patty.kind === 'veggie') return heat === 0 ? ['#b5ab74', '#858157', '#56533a'] : heat === 1 ? ['#aa9458', '#756640', '#443d2c'] : ['#98733f', '#59452b', '#33291e'];
+  return heat === 0 ? ['#e5a39a', '#bc6560', '#773f3b'] : heat === 1 ? ['#d59a73', '#a8694d', '#603b2d'] : heat === 2 ? ['#c28b5b', '#915532', '#4c2c1f'] : ['#a56d42', '#704027', '#38251d'];
+}
+
+function PattyGradient({ patty, id }: { patty: Patty; id: string }) {
+  const [light, middle, edge] = pattyColors(patty);
+  return <radialGradient id={id} cx=".34" cy=".25"><stop stopColor={light}/><stop offset=".58" stopColor={middle}/><stop offset="1" stopColor={edge}/></radialGradient>;
+}
+
+function PattyArt({ patty, gradient, className }: { patty: Patty; gradient: string; className?: string }) {
+  const heat = patty.ticks[patty.side];
+  return <g className={className} filter="url(#foodShadow)">
+    <path d="M341 226 Q359 200 395 198 Q420 183 449 197 Q492 181 524 208 Q554 209 569 243 Q593 263 572 298 Q579 329 550 357 Q518 376 493 370 Q456 387 421 369 Q386 379 354 346 Q326 332 326 302 Q306 264 341 226Z" fill={`url(#${gradient})`} stroke={heat ? '#573624' : patty.kind === 'veggie' ? '#5c5337' : '#854e44'} strokeWidth="8" filter="url(#rough)"/>
+    <path d="M352 258 Q401 210 460 215 M536 325 Q487 360 425 354" stroke="#f3b578" strokeWidth="5" fill="none" opacity={heat ? '.28' : '.42'} strokeLinecap="round"/>
+    {heat > 0 && <g fill="none" stroke="#43291d" strokeWidth="8" strokeLinecap="round" opacity={Math.min(.18 + heat * .15, .62)}><path d="M378 257 Q453 278 540 250 M365 291 Q452 313 554 290 M386 328 Q452 346 525 323"/></g>}
+    {heat >= 2 && <g fill="#3e291d" opacity=".3"><ellipse cx="410" cy="237" rx="10" ry="4"/><ellipse cx="513" cy="308" rx="13" ry="5"/><ellipse cx="459" cy="340" rx="8" ry="3"/></g>}
+    {patty.kind === 'veggie' && <g fill="#d0b87c" opacity=".55"><circle cx="395" cy="238" r="4"/><circle cx="485" cy="253" r="3"/><circle cx="428" cy="326" r="4"/><circle cx="526" cy="325" r="3"/></g>}
+  </g>;
+}
+
+export function GrillScene({ kitchen, motion, ids }: { kitchen: KitchenState; motion: { action: KitchenAction; id: number; previousPatty: Patty | null } | null; ids: (number | null)[] }) {
   return <svg className="grill-art" viewBox="0 0 1200 650" role="img" aria-label={`Grill with ${kitchen.slots.filter((state) => state.patty?.onGrill).length} patties; ${kitchen.slots.map((state, slot) => `burger ${slot + 1}: ${state.stack.join(', ') || 'empty plate'}`).join('; ')}`}>
     <defs>
       <linearGradient id="counter" x2="0" y2="1"><stop stopColor="#664331"/><stop offset=".46" stopColor="#865c3d"/><stop offset="1" stopColor="#533725"/></linearGradient>
@@ -35,28 +58,33 @@ export function GrillScene({ kitchen, motion, ids }: { kitchen: KitchenState; mo
       <linearGradient id="bar" x2="0" y2="1"><stop stopColor="#c8d0c5"/><stop offset=".3" stopColor="#788b82"/><stop offset=".6" stopColor="#313d39"/><stop offset="1" stopColor="#0a1111"/></linearGradient>
       <radialGradient id="coals"><stop stopColor="#fd8b35" stopOpacity=".83"/><stop offset=".48" stopColor="#d94e23" stopOpacity=".36"/><stop offset="1" stopColor="#e0712c" stopOpacity="0"/></radialGradient>
       <radialGradient id="meat" cx=".34" cy=".25"><stop stopColor="#bd8655"/><stop offset=".6" stopColor="#814528"/><stop offset="1" stopColor="#492416"/></radialGradient>
-      {kitchen.slots.map((state, slot) => <radialGradient key={slot} id={`grill-meat-${slot}`} cx=".34" cy=".25"><stop stopColor={state.patty && doneness(state.patty) === 'burnt' ? '#4b3025' : state.patty?.ticks.every((n) => n === 0) && state.patty.kind === 'beef' ? '#d98982' : '#b6794c'}/><stop offset=".56" stopColor={state.patty?.kind === 'veggie' ? '#75653b' : state.patty?.ticks.every((n) => n === 0) ? '#ac514a' : '#814528'}/><stop offset="1" stopColor="#492416"/></radialGradient>)}
+      {kitchen.slots.flatMap((state, slot) => [state.patty && <PattyGradient key={`current-${slot}`} id={`grill-meat-${slot}`} patty={state.patty}/>, motion?.action.type === 'slot' && motion.action.slot === slot && motion.previousPatty && <PattyGradient key={`previous-${slot}`} id={`grill-meat-previous-${slot}`} patty={motion.previousPatty}/>])}
       <linearGradient id="bunTop" x2=".3" y2="1"><stop stopColor="#f6cc83"/><stop offset=".6" stopColor="#dd9447"/><stop offset="1" stopColor="#a95e28"/></linearGradient><linearGradient id="bunBottom" x2="0" y2="1"><stop stopColor="#f3bb70"/><stop offset="1" stopColor="#a86430"/></linearGradient>
       <radialGradient id="plate"><stop stopColor="#f4ebd8"/><stop offset=".62" stopColor="#f4ebd8"/><stop offset=".64" stopColor="#c4c8b8"/><stop offset=".78" stopColor="#e8e3d1"/><stop offset=".83" stopColor="#a2aaa1"/><stop offset="1" stopColor="#e5e0cc"/></radialGradient>
       <pattern id="grain" width="200" height="210" patternUnits="userSpaceOnUse"><path d="M-10 65 Q65 59 210 65 M-10 132 Q85 137 210 129 M-10 204 Q94 194 210 205" fill="none" stroke="#38271c" strokeOpacity=".18" strokeWidth="4"/><path d="M0 70 Q80 65 200 70 M0 137 Q90 143 200 136" fill="none" stroke="#edb277" strokeOpacity=".12" strokeWidth="2"/></pattern>
       <filter id="shadow" x="-30%" y="-30%" width="160%" height="170%"><feGaussianBlur in="SourceAlpha" stdDeviation="13"/><feOffset dy="16" dx="7"/><feComponentTransfer><feFuncA type="linear" slope=".7"/></feComponentTransfer><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>
       <filter id="foodShadow" x="-50%" y="-50%" width="200%" height="220%"><feGaussianBlur in="SourceAlpha" stdDeviation="4"/><feOffset dy="6"/><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-      <filter id="rough"><feTurbulence type="fractalNoise" baseFrequency=".045" numOctaves="3" result="noise" seed="7"/><feDisplacementMap in="SourceGraphic" in2="noise" scale="9"/></filter>
+      <filter id="rough"><feTurbulence type="fractalNoise" baseFrequency=".045" numOctaves="2" result="noise" seed="7"/><feDisplacementMap in="SourceGraphic" in2="noise" scale="5"/></filter>
+      <filter id="plateShadow" x="-25%" y="-25%" width="150%" height="160%"><feGaussianBlur in="SourceAlpha" stdDeviation="7"/><feOffset dy="8"/><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>
       <clipPath id="grillClip"><rect x="78" y="83" width="738" height="452" rx="13"/></clipPath>
     </defs>
     <rect width="1200" height="650" fill="url(#counter)"/><rect width="1200" height="650" fill="url(#grain)"/>
     <path d="M0 27 Q446 10 1200 22 M0 610 Q680 589 1200 615" stroke="#b98b60" strokeOpacity=".17" strokeWidth="9" fill="none"/>
     <g filter="url(#shadow)"><rect x="36" y="43" width="822" height="540" rx="35" fill="#293433" stroke="#252e2e" strokeWidth="14"/><rect x="43" y="49" width="808" height="491" rx="28" fill="url(#steel)" stroke="#d6dfcf" strokeOpacity=".7" strokeWidth="7"/><rect x="74" y="79" width="745" height="460" rx="15" fill="url(#grillDark)" stroke="#253330" strokeWidth="12"/>
-      <g clipPath="url(#grillClip)"><ellipse cx="445" cy="310" rx="430" ry="270" fill="url(#coals)" opacity=".95"/>{bars.map((y, i) => <g key={y}><rect x="66" y={y+5} width="764" height="16" rx="6" fill="#0c0e0c" opacity=".85"/><rect x="66" y={y} width="764" height="13" rx="4" fill="url(#bar)"/><path d={`M80 ${y+2} H804`} stroke="#dae0d1" strokeWidth="2" opacity={i % 3 === 0 ? '.7' : '.36'}/></g>)}</g><rect x="52" y="540" width="792" height="33" rx="8" fill="#34403d"/><path d="M70 552 H825" stroke="#bac5b7" strokeOpacity=".36" strokeWidth="2"/><circle cx="789" cy="558" r="18" fill="#17211f" stroke="#80918a" strokeWidth="6"/><path d="M789 541 v11" stroke="#d9e0d1" strokeWidth="3" strokeLinecap="round"/><circle cx="705" cy="558" r="5" fill="#ee8748"/><circle cx="728" cy="558" r="5" fill="#f2aa65"/></g>
-    {kitchen.slots.map((state, slot) => state.patty?.onGrill && <g key={`patty-${slot}`} transform={`translate(${grillPositions[slot][0]} ${grillPositions[slot][1]})`}>
-      <g key={`side-${state.patty.side}`} className={motion?.action.type === 'slot' && motion.action.slot === slot && motion.action.action.type === 'patty.flip' ? 'patty-flip' : 'patty-enter'} filter="url(#foodShadow)">
-        <path d="M341 226 Q359 200 395 198 Q420 183 449 197 Q492 181 524 208 Q554 209 569 243 Q593 263 572 298 Q579 329 550 357 Q518 376 493 370 Q456 387 421 369 Q386 379 354 346 Q326 332 326 302 Q306 264 341 226Z" fill={`url(#grill-meat-${slot})`} stroke="#613a29" strokeWidth="12" filter="url(#rough)"/>
-        <path d="M352 260 Q399 204 460 215 M537 326 Q485 369 421 354" stroke="#df9b61" strokeWidth="6" fill="none" opacity=".46" strokeLinecap="round"/>
-        <path d="M377 257 Q453 276 541 250 M363 293 Q451 311 555 289 M382 329 Q453 345 527 325" stroke="#3c231a" strokeWidth="10" strokeOpacity=".5" fill="none" strokeLinecap="round"/>
-      </g><g className="steam" aria-hidden="true"><path d="M400 192 Q382 168 400 145 T402 114"/><path d="M510 192 Q488 170 508 145 T506 111"/></g>
-    </g>)}
+      <g clipPath="url(#grillClip)"><ellipse cx="445" cy="310" rx="430" ry="270" fill="url(#coals)" opacity=".55"/>{bars.map((y, i) => <g key={y}><rect x="66" y={y+5} width="764" height="16" rx="6" fill="#0c0e0c" opacity=".85"/><rect x="66" y={y} width="764" height="13" rx="4" fill="url(#bar)"/><path d={`M80 ${y+2} H804`} stroke="#dae0d1" strokeWidth="2" opacity={i % 3 === 0 ? '.35' : '.18'}/></g>)}</g><rect x="52" y="540" width="792" height="33" rx="8" fill="#34403d"/><path d="M70 552 H825" stroke="#bac5b7" strokeOpacity=".36" strokeWidth="2"/><circle cx="789" cy="558" r="18" fill="#17211f" stroke="#80918a" strokeWidth="6"/><path d="M789 541 v11" stroke="#d9e0d1" strokeWidth="3" strokeLinecap="round"/><circle cx="705" cy="558" r="5" fill="#ee8748"/><circle cx="728" cy="558" r="5" fill="#f2aa65"/></g>
+    {kitchen.slots.map((state, slot) => {
+      const move = motion?.action.type === 'slot' && motion.action.slot === slot ? motion.action.action.type : null;
+      const oldPatty = move === 'patty.flip' || move === 'patty.remove' ? motion?.previousPatty : null;
+      if (!state.patty?.onGrill && !oldPatty) return null;
+      return <g key={`patty-${slot}`} transform={`translate(${grillPositions[slot][0]} ${grillPositions[slot][1]})`}>
+        {oldPatty && <PattyArt key={`old-${motion?.id}`} patty={oldPatty} gradient={`grill-meat-previous-${slot}`} className={move === 'patty.flip' ? 'patty-flip-front' : 'patty-lift'}/>}
+        {state.patty?.onGrill && <PattyArt key={`current-${state.patty.side}`} patty={state.patty} gradient={`grill-meat-${slot}`} className={move === 'patty.place' ? 'patty-place' : move === 'patty.flip' ? 'patty-flip-back' : undefined}/>}
+        {state.patty?.onGrill && state.patty.ticks.some(Boolean) && <g className="steam" aria-hidden="true"><path d="M400 192 Q382 168 400 145 T402 114"/><path d="M510 192 Q488 170 508 145 T506 111"/></g>}
+        {state.patty?.onGrill && motion?.action.type === 'grill.wait' && <g key={motion.id} className="sizzle" aria-hidden="true"><path d="M339 228 Q321 243 326 260 M569 244 Q584 264 575 281 M352 353 Q366 370 388 374"/></g>}
+      </g>;
+    })}
     {ids.map((id, slot) => id !== null && <g key={`grill-number-${slot}`} className="position-number" transform={`translate(${160 + (slot % 2) * 330} ${116 + Math.floor(slot / 2) * 205})`}><circle r="24"/><text>{String(id).padStart(2, '0')}</text></g>)}
-    <g className="plate-group">{kitchen.slots.map((state, slot) => <g key={slot}><g filter="url(#shadow)"><circle cx={platePositions[slot][0]} cy={platePositions[slot][1]} r="79" fill="url(#plate)" stroke="#e8e6d8" strokeWidth="4"/><circle cx={platePositions[slot][0]} cy={platePositions[slot][1]} r="58" fill="none" stroke="#aeb6a9" strokeWidth="2" opacity=".65"/></g><StackedBurger stack={state.stack} x={platePositions[slot][0]} y={platePositions[slot][1]}/>{ids[slot] !== null && <g className="position-number plate-number" transform={`translate(${platePositions[slot][0] - 57} ${platePositions[slot][1] - 61})`}><circle r="21"/><text>{String(ids[slot]).padStart(2, '0')}</text></g>}</g>)}</g>
-    {motion?.action.type === 'slot' && ['patty.place', 'patty.flip', 'patty.remove'].includes(motion.action.action.type) && <g key={motion.id} transform={`translate(${450 + grillPositions[motion.action.slot][0]} ${285 + grillPositions[motion.action.slot][1]})`}><g className={`spatula spatula-${motion.action.action.type.split('.')[1]}`}><path d="M-46 5 L20 -43 L42 -21 L-23 29Z" fill="url(#steel)" stroke="#50615c" strokeWidth="5"/><path d="M30 -32 L112 -115" stroke="#9baba3" strokeWidth="11" strokeLinecap="round"/><path d="M98 -101 L168 -169" stroke="#6c3c26" strokeWidth="18" strokeLinecap="round"/></g></g>}
+    <g className="plate-group">{kitchen.slots.map((state, slot) => <g key={slot}><g filter="url(#plateShadow)"><circle cx={platePositions[slot][0]} cy={platePositions[slot][1]} r="79" fill="url(#plate)" stroke="#e8e6d8" strokeWidth="4"/><circle cx={platePositions[slot][0]} cy={platePositions[slot][1]} r="58" fill="none" stroke="#aeb6a9" strokeWidth="2" opacity=".65"/></g><StackedBurger stack={state.stack} x={platePositions[slot][0]} y={platePositions[slot][1]}/>{ids[slot] !== null && <g className="position-number plate-number" transform={`translate(${platePositions[slot][0] - 57} ${platePositions[slot][1] - 61})`}><circle r="21"/><text>{String(ids[slot]).padStart(2, '0')}</text></g>}</g>)}</g>
+    {motion?.action.type === 'slot' && ['patty.place', 'patty.flip', 'patty.remove'].includes(motion.action.action.type) && <g key={motion.id} transform={`translate(${450 + grillPositions[motion.action.slot][0]} ${285 + grillPositions[motion.action.slot][1]})`}><g className={`spatula spatula-${motion.action.action.type.split('.')[1]}`}><path d="M-46 5 L20 -43 L42 -21 L-23 29Z" fill="url(#steel)" stroke="#50615c" strokeWidth="5"/><path d="M15 23 L90 117" stroke="#9baba3" strokeWidth="11" strokeLinecap="round"/><path d="M75 102 L142 185" stroke="#6c3c26" strokeWidth="18" strokeLinecap="round"/></g></g>}
   </svg>;
 }

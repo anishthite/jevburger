@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { createRoot } from 'react-dom/client';
-import type { BurgerState } from './engine/burger';
+import type { BurgerState, Patty } from './engine/burger';
 import { initialKitchen, kitchenActionId, legalKitchenActions, startOrder, transitionKitchen, type KitchenAction, type KitchenState, type Slot } from './engine/kitchen';
 import { MENU, type Order } from './engine/recipes';
 import type { ProviderKey } from './jev/types';
@@ -10,7 +10,7 @@ import { GrillScene } from './GrillScene';
 import './styles.css';
 
 type Ticket = { id: number; text: string; order: Order };
-type Motion = { action: KitchenAction; id: number } | null;
+type Motion = { action: KitchenAction; id: number; previousPatty: Patty | null } | null;
 const SAMPLE_TICKETS = [
   'a classic burger with bacon', 'two cheeseburgers with extra pickles',
   'three veggie burgers with avocado', 'four cheeseburgers with jalapeños',
@@ -59,7 +59,7 @@ function App() {
     sequence.current++;
     setTickets((current) => { const next: typeof current = [...current]; next[slot] = ticket; return next; });
     setKitchen((current) => startOrder(current, slot, ticket.order));
-    setMove(`#${ticket.id} · Jev is on it`); setError(''); setPaused(false);
+    setMove(`#${ticket.id} · Jev is on it`); setMotion(null); setError(''); setPaused(false);
   }
 
   async function submit(event: FormEvent) {
@@ -93,9 +93,10 @@ function App() {
         if (sequence.current !== version) return;
         const action = legalKitchenActions(latest.current).find((candidate) => kitchenActionId(candidate) === kitchenActionId(chosen));
         if (action) {
+          const previousPatty = action.type === 'slot' ? latest.current.slots[action.slot].patty : null;
           sequence.current++;
           setKitchen((current) => transitionKitchen(current, action));
-          setMove(label(action, tickets)); setMotion({ action, id: sequence.current });
+          setMove(label(action, tickets)); setMotion({ action, id: sequence.current, previousPatty });
         }
       } catch (reason) {
         if (sequence.current === version) { setError(reason instanceof Error ? reason.message : 'Jev could not decide'); setPaused(true); }
