@@ -3,7 +3,7 @@ import type { KitchenState, KitchenAction } from './engine/kitchen';
 
 const bars = Array.from({ length: 17 }, (_, i) => 119 + i * 26);
 const grillPositions = [[-165, -90], [165, -90], [-165, 115], [165, 115]];
-const platePositions = [[900, 210], [1070, 210], [900, 465], [1070, 465]];
+const platePositions = [[940, 200], [1110, 200], [940, 435], [1110, 435]];
 const sesame = [[-50,-35],[-21,-48],[16,-39],[42,-22],[-34,-16],[4,-19],[55,-40],[-2,-55]];
 
 function StackedBurger({ stack, x, y }: { stack: string[]; x: number; y: number }) {
