@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState, type FormEvent } from 'react';
 import { createRoot } from 'react-dom/client';
 import type { BurgerState, Patty } from './engine/burger';
 import { initialKitchen, kitchenActionId, legalKitchenActions, startOrder, transitionKitchen, type KitchenAction, type KitchenState, type Slot } from './engine/kitchen';
@@ -6,8 +6,9 @@ import { MENU, type Order } from './engine/recipes';
 import type { ProviderKey } from './jev/types';
 import { chooseKitchenMove } from './jev/kitchen';
 import { parseOrder } from './jev/orders';
-import { GrillScene } from './GrillScene';
 import './styles.css';
+
+const Kitchen3D = lazy(() => import('./Kitchen3D').then(({ Kitchen3D }) => ({ default: Kitchen3D })));
 
 type Ticket = { id: number; text: string; order: Order };
 type Motion = { action: KitchenAction; id: number; previousPatty: Patty | null } | null;
@@ -47,6 +48,7 @@ function App() {
   const [key, setKey] = useState<ProviderKey>(readKey);
   const [serverKey, setServerKey] = useState(false);
   const [showKey, setShowKey] = useState(false);
+  const [small, setSmall] = useState(() => window.matchMedia('(max-width: 640px)').matches);
   const nextId = useRef(1);
   const sequence = useRef(0);
   const latest = useRef(kitchen);
@@ -54,6 +56,7 @@ function App() {
   const connected = Boolean(serverKey || key.key.trim());
 
   useEffect(() => { fetch('/api/config').then((r) => r.json()).then((data: { configured: boolean }) => setServerKey(data.configured)).catch(() => {}); }, []);
+  useEffect(() => { const media = window.matchMedia('(max-width: 640px)'); const update = () => setSmall(media.matches); media.addEventListener('change', update); return () => media.removeEventListener('change', update); }, []);
 
   function start(slot: Slot, ticket: Ticket) {
     sequence.current++;
@@ -125,10 +128,10 @@ function App() {
       {tickets.some(Boolean) && <div className="active-tickets">{tickets.map((ticket, slot) => ticket ? <div key={slot} className="ticket"><span className="ticket-label">ORDER {String(ticket.id).padStart(2, '0')}</span><strong>{MENU[ticket.order.recipe].name}</strong><span className="ticket-stage">{stage(kitchen.slots[slot])}</span><span className="ticket-request">{ticket.text}</span></div> : <div key={slot} className="ticket vacant">EMPTY SPOT {slot + 1}</div>)}</div>}
       <div className="move-bubble" role="status"><div className="move-icon">✳</div><div><small>JEV · {paused ? 'PAUSED' : busy ? 'DECIDING' : active ? 'LAST MOVE' : 'READY'}</small><strong>{caption}</strong></div></div>
       <div className="scene" data-active={active} aria-label="Burger grill game">
-        <GrillScene kitchen={kitchen} motion={motion} ids={tickets.map((ticket) => ticket?.id ?? null)}/>
+        <Suspense fallback={<div className="kitchen-3d" role="img" aria-label="Preparing the grill"/>}><Kitchen3D kitchen={kitchen} motion={motion} ids={tickets.map((ticket) => ticket?.id ?? null)}/></Suspense>
         <span className="prep-tag" aria-hidden="true">02 / PLATING</span>
       </div>
-      <div className="mobile-plating" aria-label="Burger assembly plates"><GrillScene kitchen={kitchen} motion={null} ids={tickets.map((ticket) => ticket?.id ?? null)}/></div>
+      <div className="mobile-plating" aria-label="Burger assembly plates">{small && <Suspense fallback={<div className="kitchen-3d" role="img" aria-label="Preparing the plates"/>}><Kitchen3D kitchen={kitchen} motion={motion} ids={tickets.map((ticket) => ticket?.id ?? null)} view="plates"/></Suspense>}</div>
       <div className="toolbar"><span>{tickets.filter(Boolean).length} on the line{queue.length ? ` · ${queue.length} waiting` : ''}</span><div><button onClick={() => { sequence.current++; setPaused((value) => !value); setError(''); }} disabled={!active}>{paused ? 'Resume Jev ▶' : 'Pause Jev Ⅱ'}</button>{tickets.map((ticket, slot) => ticket && <button key={slot} onClick={() => start(slot as Slot, ticket)}>Retry #{ticket.id} ↗</button>)}</div></div>
       {showKey && <div className="key-drawer"><span>{serverKey ? 'Server key connected' : 'Connect Jev to read and cook tickets.'}</span>{!serverKey && <><select aria-label="Key provider" value={key.provider} onChange={(e) => setKey({ provider: e.target.value as ProviderKey['provider'], key: '' })}><option value="openrouter">OpenRouter</option><option value="typesafe">TypeSafe</option></select><input aria-label="API key" type="password" autoComplete="off" placeholder="Your API key" value={key.key} onChange={(e) => { const nextKey = { ...key, key: e.target.value }; setKey(nextKey); localStorage.setItem('jevburger:key', JSON.stringify(nextKey)); }}/></>}<button aria-label="Close key settings" onClick={() => setShowKey(false)}>✕</button><small>Saved in this browser. Jev handles parsing and every cooking move.</small></div>}
     </main>
