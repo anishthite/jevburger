@@ -21,8 +21,8 @@ it('keeps outgoing food visible through spatula contact and changes the flipped 
   const flipped = show(kitchen, flip, beforeFlip);
   expect(flipped).toContain('class="patty-flip-front"');
   expect(flipped).toContain('class="patty-flip-back"');
-  expect(flipped).toContain('#e5a39a'); // fresh underside
-  expect(flipped).toContain('#c28b5b'); // seared outgoing side
+  expect(flipped).toContain('#d89b91'); // fresh underside
+  expect(flipped).toContain('#a7744e'); // seared outgoing side
 
   kitchen = transitionKitchen(transitionKitchen(kitchen, { type: 'grill.wait' }), { type: 'grill.wait' });
   const beforeRemove = kitchen.slots[0].patty;
